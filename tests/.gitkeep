@@ -1,0 +1,18 @@
+# Tests Directory
+
+This directory contains test files and test utilities.
+
+## Structure
+
+- Unit tests
+- Integration tests
+- Test utilities and helpers
+- Mock data and fixtures
+
+## Naming Conventions
+
+Follow these naming patterns:
+- `test_[module_name].py` for Python
+- `[module_name].test.js` for JavaScript
+- `[module_name]_test.go` for Go
+- Adjust according to your project's language and conventions

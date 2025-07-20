@@ -1,0 +1,331 @@
+/**
+ * Pantry & Commissary Recipe System - Frontend Application
+ * Handles file uploads, recipe searches, and UI interactions
+ */
+
+// Configuration
+const API_BASE_URL = 'http://localhost:5001';
+
+// DOM Elements
+const pantryUpload = document.getElementById('pantry-upload');
+const commissaryUpload = document.getElementById('commissary-upload');
+const uploadBtn = document.getElementById('upload-btn');
+const searchSection = document.querySelector('.search-section');
+const resultsSection = document.querySelector('.results-section');
+const searchBtn = document.getElementById('search-btn');
+const loadingOverlay = document.getElementById('loading');
+const resultsContainer = document.getElementById('results-container');
+
+// State management
+let uploadedFiles = {
+    pantry: null,
+    commissary: null
+};
+
+// Event listeners
+pantryUpload.addEventListener('change', handleFileSelect);
+commissaryUpload.addEventListener('change', handleFileSelect);
+uploadBtn.addEventListener('click', handleUpload);
+searchBtn.addEventListener('click', handleSearch);
+
+// Initialize app
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Pantry & Commissary Recipe System initialized');
+    checkAPIConnection();
+});
+
+/**
+ * Check if the API is accessible
+ */
+async function checkAPIConnection() {
+    try {
+        const response = await fetch(`${API_BASE_URL}/health`);
+        const data = await response.json();
+        
+        if (data.status === 'healthy') {
+            console.log('API connection established');
+        } else {
+            showError('API connection failed');
+        }
+    } catch (error) {
+        console.error('API connection error:', error);
+        showError('Unable to connect to the recipe service. Please ensure the backend is running.');
+    }
+}
+
+/**
+ * Handle file selection
+ */
+function handleFileSelect(event) {
+    const fileInput = event.target;
+    const file = fileInput.files[0];
+    const fileType = fileInput.id.includes('pantry') ? 'pantry' : 'commissary';
+    
+    if (file) {
+        // Validate file type
+        const allowedTypes = ['.csv', '.xlsx', '.xls'];
+        const fileExtension = '.' + file.name.split('.').pop().toLowerCase();
+        
+        if (!allowedTypes.includes(fileExtension)) {
+            showError(`Invalid file type. Please upload a CSV or Excel file.`);
+            fileInput.value = '';
+            return;
+        }
+        
+        // Store the file
+        uploadedFiles[fileType] = file;
+        
+        // Update UI
+        const label = fileInput.nextElementSibling;
+        label.innerHTML = `<i class="fas fa-check"></i> ${file.name}`;
+        label.style.backgroundColor = '#28a745';
+        
+        // Enable upload button if at least one file is selected
+        checkUploadReadiness();
+    }
+}
+
+/**
+ * Check if upload button should be enabled
+ */
+function checkUploadReadiness() {
+    const hasFiles = uploadedFiles.pantry || uploadedFiles.commissary;
+    uploadBtn.disabled = !hasFiles;
+}
+
+/**
+ * Handle file upload
+ */
+async function handleUpload() {
+    if (!uploadedFiles.pantry && !uploadedFiles.commissary) {
+        showError('Please select at least one file to upload');
+        return;
+    }
+    
+    showLoading('Processing your inventory files...');
+    
+    try {
+        const formData = new FormData();
+        
+        if (uploadedFiles.pantry) {
+            formData.append('pantry', uploadedFiles.pantry);
+        }
+        
+        if (uploadedFiles.commissary) {
+            formData.append('commissary', uploadedFiles.commissary);
+        }
+        
+        const response = await fetch(`${API_BASE_URL}/api/upload`, {
+            method: 'POST',
+            body: formData
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            showSuccess('Files uploaded successfully!');
+            
+            // Show search section
+            searchSection.style.display = 'block';
+            
+            // Scroll to search section
+            searchSection.scrollIntoView({ behavior: 'smooth' });
+        } else {
+            showError(`Upload failed: ${data.message}`);
+        }
+    } catch (error) {
+        console.error('Upload error:', error);
+        showError('Upload failed. Please try again.');
+    } finally {
+        hideLoading();
+    }
+}
+
+/**
+ * Handle recipe search
+ */
+async function handleSearch() {
+    const dishType = document.getElementById('dish-type').value;
+    const cuisine = document.getElementById('cuisine').value;
+    
+    showLoading('Searching for recipes...');
+    
+    try {
+        const params = new URLSearchParams({
+            type: dishType,
+            limit: '10'
+        });
+        
+        if (cuisine) {
+            params.append('cuisine', cuisine);
+        }
+        
+        const response = await fetch(`${API_BASE_URL}/api/recipes?${params}`);
+        const data = await response.json();
+        
+        if (response.ok) {
+            displayResults(data.recipes);
+            
+            // Show results section
+            resultsSection.style.display = 'block';
+            
+            // Scroll to results section
+            resultsSection.scrollIntoView({ behavior: 'smooth' });
+        } else {
+            showError(`Search failed: ${data.message}`);
+        }
+    } catch (error) {
+        console.error('Search error:', error);
+        showError('Search failed. Please try again.');
+    } finally {
+        hideLoading();
+    }
+}
+
+/**
+ * Display recipe results
+ */
+function displayResults(recipes) {
+    if (!recipes || recipes.length === 0) {
+        resultsContainer.innerHTML = `
+            <div class="text-center">
+                <i class="fas fa-utensils" style="font-size: 3rem; color: #ccc; margin-bottom: 20px;"></i>
+                <h3>No recipes found</h3>
+                <p>Try adjusting your search criteria or uploading different inventory files.</p>
+            </div>
+        `;
+        return;
+    }
+    
+    resultsContainer.innerHTML = recipes.map(recipe => `
+        <div class="recipe-card">
+            <h3><i class="fas fa-utensils"></i> ${recipe.title}</h3>
+            <p>${recipe.description || 'A delicious Whole30-compliant recipe'}</p>
+            
+            <div class="match-percentage">
+                <i class="fas fa-percentage"></i> ${recipe.match_percentage}% ingredients available
+            </div>
+            
+            <div class="ingredient-sources">
+                <span class="source-tag source-pantry">
+                    <i class="fas fa-home"></i> Pantry: ${recipe.sources.pantry}
+                </span>
+                <span class="source-tag source-commissary">
+                    <i class="fas fa-store"></i> Commissary: ${recipe.sources.commissary}
+                </span>
+                <span class="source-tag source-store">
+                    <i class="fas fa-shopping-cart"></i> Store: ${recipe.sources.store}
+                </span>
+            </div>
+            
+            <div style="margin-top: 15px;">
+                <span style="color: #666;">
+                    <i class="fas fa-list"></i> ${recipe.ingredients_available}/${recipe.ingredients_total} ingredients available
+                </span>
+            </div>
+            
+            ${recipe.url ? `
+                <div style="margin-top: 15px;">
+                    <a href="${recipe.url}" target="_blank" class="btn-primary" style="display: inline-block; text-decoration: none;">
+                        <i class="fas fa-external-link-alt"></i> View Recipe
+                    </a>
+                </div>
+            ` : ''}
+        </div>
+    `).join('');
+}
+
+/**
+ * Show loading overlay
+ */
+function showLoading(message = 'Processing...') {
+    const spinner = loadingOverlay.querySelector('.loading-spinner p');
+    spinner.textContent = message;
+    loadingOverlay.style.display = 'flex';
+}
+
+/**
+ * Hide loading overlay
+ */
+function hideLoading() {
+    loadingOverlay.style.display = 'none';
+}
+
+/**
+ * Show success message
+ */
+function showSuccess(message) {
+    showNotification(message, 'success');
+}
+
+/**
+ * Show error message
+ */
+function showError(message) {
+    showNotification(message, 'error');
+}
+
+/**
+ * Show notification
+ */
+function showNotification(message, type = 'info') {
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.className = `notification ${type}`;
+    notification.innerHTML = `
+        <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-triangle'}"></i>
+        <span>${message}</span>
+        <button onclick="this.parentElement.remove()" class="notification-close">
+            <i class="fas fa-times"></i>
+        </button>
+    `;
+    
+    // Add styles
+    notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: ${type === 'success' ? '#d4edda' : '#f8d7da'};
+        color: ${type === 'success' ? '#155724' : '#721c24'};
+        padding: 15px 20px;
+        border-radius: 5px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        z-index: 1001;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        max-width: 400px;
+        border: 1px solid ${type === 'success' ? '#c3e6cb' : '#f5c6cb'};
+    `;
+    
+    // Add close button styles
+    const closeBtn = notification.querySelector('.notification-close');
+    closeBtn.style.cssText = `
+        background: none;
+        border: none;
+        color: inherit;
+        cursor: pointer;
+        font-size: 0.9rem;
+        padding: 0;
+        margin-left: 10px;
+    `;
+    
+    // Add to page
+    document.body.appendChild(notification);
+    
+    // Auto-remove after 5 seconds
+    setTimeout(() => {
+        if (notification.parentElement) {
+            notification.remove();
+        }
+    }, 5000);
+}
+
+// Utility functions
+function formatFileSize(bytes) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
