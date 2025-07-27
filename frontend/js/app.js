@@ -15,11 +15,18 @@ const resultsSection = document.querySelector('.results-section');
 const searchBtn = document.getElementById('search-btn');
 const loadingOverlay = document.getElementById('loading');
 const resultsContainer = document.getElementById('results-container');
+const inventorySummary = document.getElementById('inventory-summary');
 
 // State management
 let uploadedFiles = {
     pantry: null,
     commissary: null
+};
+
+let currentInventory = {
+    pantry: [],
+    commissary: [],
+    using_sample_data: true
 };
 
 // Event listeners
@@ -32,6 +39,7 @@ searchBtn.addEventListener('click', handleSearch);
 document.addEventListener('DOMContentLoaded', function() {
     console.log('Pantry & Commissary Recipe System initialized');
     checkAPIConnection();
+    loadSampleData();
 });
 
 /**
@@ -51,6 +59,81 @@ async function checkAPIConnection() {
         console.error('API connection error:', error);
         showError('Unable to connect to the recipe service. Please ensure the backend is running.');
     }
+}
+
+/**
+ * Load sample inventory data automatically
+ */
+async function loadSampleData() {
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/sample-data`);
+        const data = await response.json();
+        
+        if (response.ok && data.status === 'success') {
+            currentInventory.pantry = data.pantry;
+            currentInventory.commissary = data.commissary;
+            currentInventory.using_sample_data = true;
+            
+            // Update UI to show loaded inventory
+            displayInventorySummary(data);
+            
+            console.log(`Loaded ${data.summary.total_items} sample inventory items`);
+        } else {
+            throw new Error(data.message || 'Failed to load sample data');
+        }
+    } catch (error) {
+        console.error('Error loading sample data:', error);
+        inventorySummary.innerHTML = `
+            <div class="error-message">
+                <i class="fas fa-exclamation-triangle"></i>
+                <p>Unable to load sample inventory. Please try uploading your own files.</p>
+            </div>
+        `;
+    }
+}
+
+/**
+ * Display inventory summary
+ */
+function displayInventorySummary(data) {
+    const { summary } = data;
+    const dataSource = currentInventory.using_sample_data ? 'sample' : 'uploaded';
+    
+    inventorySummary.innerHTML = `
+        <div class="inventory-cards">
+            <div class="inventory-card pantry-card">
+                <div class="card-header">
+                    <i class="fas fa-home"></i>
+                    <h3>Pantry</h3>
+                    <span class="badge">${summary.pantry_count} items</span>
+                </div>
+                <p>Free ingredients from your pantry</p>
+            </div>
+            
+            <div class="inventory-card commissary-card">
+                <div class="card-header">
+                    <i class="fas fa-store"></i>
+                    <h3>Commissary</h3>
+                    <span class="badge">${summary.commissary_count} items</span>
+                </div>
+                <p>Reduced-cost ingredients from commissary</p>
+            </div>
+            
+            <div class="inventory-card total-card">
+                <div class="card-header">
+                    <i class="fas fa-list"></i>
+                    <h3>Total</h3>
+                    <span class="badge">${summary.total_items} items</span>
+                </div>
+                <p>Using ${dataSource} inventory data</p>
+            </div>
+        </div>
+        
+        <div class="ready-message">
+            <i class="fas fa-check-circle"></i>
+            <span>Ready to search for recipes!</span>
+        </div>
+    `;
 }
 
 /**
@@ -123,10 +206,29 @@ async function handleUpload() {
         const data = await response.json();
         
         if (response.ok) {
-            showSuccess('Files uploaded successfully!');
+            showSuccess('Custom files uploaded successfully!');
             
-            // Show search section
-            searchSection.style.display = 'block';
+            // Mark as using custom data
+            currentInventory.using_sample_data = false;
+            
+            // Update inventory display to show custom files are being used
+            inventorySummary.innerHTML = `
+                <div class="inventory-cards">
+                    <div class="inventory-card custom-card">
+                        <div class="card-header">
+                            <i class="fas fa-upload"></i>
+                            <h3>Custom Files</h3>
+                            <span class="badge">Uploaded</span>
+                        </div>
+                        <p>Using your uploaded inventory files</p>
+                    </div>
+                </div>
+                
+                <div class="ready-message">
+                    <i class="fas fa-check-circle"></i>
+                    <span>Ready to search for recipes with your custom inventory!</span>
+                </div>
+            `;
             
             // Scroll to search section
             searchSection.scrollIntoView({ behavior: 'smooth' });

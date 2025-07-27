@@ -15,36 +15,48 @@
         </header>
 
         <main>
-            <section class="upload-section">
-                <h2><i class="fas fa-upload"></i> Upload Your Inventory</h2>
-                <div class="upload-grid">
-                    <div class="upload-box">
-                        <h3><i class="fas fa-home"></i> Pantry (Free)</h3>
-                        <input type="file" id="pantry-upload" accept=".csv,.xlsx,.xls" class="file-input">
-                        <label for="pantry-upload" class="file-label">
-                            <i class="fas fa-cloud-upload-alt"></i>
-                            <span>Choose Pantry File</span>
-                        </label>
-                        <p class="file-info">Upload your pantry inventory (CSV or Excel)</p>
-                    </div>
-                    
-                    <div class="upload-box">
-                        <h3><i class="fas fa-store"></i> Commissary (Reduced Cost)</h3>
-                        <input type="file" id="commissary-upload" accept=".csv,.xlsx,.xls" class="file-input">
-                        <label for="commissary-upload" class="file-label">
-                            <i class="fas fa-cloud-upload-alt"></i>
-                            <span>Choose Commissary File</span>
-                        </label>
-                        <p class="file-info">Upload your commissary inventory (CSV or Excel)</p>
+            <section class="sample-data-section">
+                <h2><i class="fas fa-list"></i> Current Inventory</h2>
+                <div id="inventory-summary" class="inventory-summary">
+                    <div class="loading-inventory">
+                        <i class="fas fa-spinner fa-spin"></i> Loading sample inventory...
                     </div>
                 </div>
                 
-                <button id="upload-btn" class="btn-primary" disabled>
-                    <i class="fas fa-upload"></i> Process Files
-                </button>
+                <details class="upload-toggle">
+                    <summary><i class="fas fa-upload"></i> Upload Custom Inventory Files (Optional)</summary>
+                    <div class="upload-content">
+                        <p class="upload-disclaimer">The system is pre-loaded with sample pantry and commissary data. Only upload files if you want to use your own inventory.</p>
+                        <div class="upload-grid">
+                            <div class="upload-box">
+                                <h3><i class="fas fa-home"></i> Pantry (Free)</h3>
+                                <input type="file" id="pantry-upload" accept=".csv,.xlsx,.xls" class="file-input">
+                                <label for="pantry-upload" class="file-label">
+                                    <i class="fas fa-cloud-upload-alt"></i>
+                                    <span>Choose Pantry File</span>
+                                </label>
+                                <p class="file-info">Upload your pantry inventory (CSV or Excel)</p>
+                            </div>
+                            
+                            <div class="upload-box">
+                                <h3><i class="fas fa-store"></i> Commissary (Reduced Cost)</h3>
+                                <input type="file" id="commissary-upload" accept=".csv,.xlsx,.xls" class="file-input">
+                                <label for="commissary-upload" class="file-label">
+                                    <i class="fas fa-cloud-upload-alt"></i>
+                                    <span>Choose Commissary File</span>
+                                </label>
+                                <p class="file-info">Upload your commissary inventory (CSV or Excel)</p>
+                            </div>
+                        </div>
+                        
+                        <button id="upload-btn" class="btn-primary" disabled>
+                            <i class="fas fa-upload"></i> Process Custom Files
+                        </button>
+                    </div>
+                </details>
             </section>
 
-            <section class="search-section" style="display: none;">
+            <section class="search-section">
                 <h2><i class="fas fa-search"></i> Find Recipes</h2>
                 <div class="search-form">
                     <div class="form-group">
