@@ -78,6 +78,9 @@ async function loadSampleData() {
             displayInventorySummary(data);
             
             console.log(`Loaded ${data.summary.total_items} total ingredient availability items`);
+            
+            // Show ready message under search button
+            showReadyMessage('Ready to search for recipes!');
         } else {
             throw new Error(data.message || 'Failed to load sample data');
         }
@@ -129,10 +132,6 @@ function displayInventorySummary(data) {
             </div>
         </div>
         
-        <div class="ready-message">
-            <i class="fas fa-check-circle"></i>
-            <span>Ready to search for recipes!</span>
-        </div>
     `;
 }
 
@@ -224,11 +223,10 @@ async function handleUpload() {
                     </div>
                 </div>
                 
-                <div class="ready-message">
-                    <i class="fas fa-check-circle"></i>
-                    <span>Ready to search for recipes with your custom availability data!</span>
-                </div>
             `;
+            
+            // Show ready message for custom data
+            showReadyMessage('Ready to search for recipes with your custom availability data!');
             
             // Scroll to search section
             searchSection.scrollIntoView({ behavior: 'smooth' });
@@ -503,6 +501,17 @@ function showNotification(message, type = 'info') {
 }
 
 // Utility functions
+/**
+ * Show ready message under search button
+ */
+function showReadyMessage(message) {
+    const readyMessage = document.getElementById('ready-message');
+    if (readyMessage) {
+        readyMessage.querySelector('span').textContent = message;
+        readyMessage.style.display = 'block';
+    }
+}
+
 function formatFileSize(bytes) {
     if (bytes === 0) return '0 Bytes';
     const k = 1024;
