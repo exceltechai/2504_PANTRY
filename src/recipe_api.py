@@ -167,6 +167,10 @@ class SpoonacularAPI:
             for recipe in data['results']:
                 processed_recipe = self._process_recipe_data(recipe)
                 if processed_recipe:
+                    # Apply cuisine filtering if specified (Spoonacular sometimes returns incorrect cuisines)
+                    if cuisine and not self._matches_cuisine_filter(processed_recipe, cuisine):
+                        logger.warning(f"Filtering out '{processed_recipe.get('title')}' - doesn't match {cuisine} cuisine")
+                        continue
                     processed_recipes.append(processed_recipe)
             
             return {
@@ -199,6 +203,59 @@ class SpoonacularAPI:
         except Exception as e:
             logger.error(f"Failed to get recipe details for ID {recipe_id}: {str(e)}")
             raise
+    
+    def _matches_cuisine_filter(self, recipe: Dict[str, Any], requested_cuisine: str) -> bool:
+        """
+        Check if a recipe actually matches the requested cuisine.
+        This is needed because Spoonacular sometimes returns recipes from wrong cuisines,
+        especially when combining cuisine filters with diet restrictions.
+        """
+        title = recipe.get('title', '').lower()
+        requested_cuisine = requested_cuisine.lower()
+        
+        # Define cuisine exclusion patterns
+        cuisine_exclusions = {
+            'asian': [
+                'jamaican', 'caribbean', 'jerk', 'trinidadian', 'cuban', 'mexican',
+                'peruvian', 'brazilian', 'argentinian', 'ethiopian', 'moroccan'
+            ],
+            'mediterranean': [
+                'jamaican', 'caribbean', 'asian', 'chinese', 'japanese', 'korean',
+                'thai', 'vietnamese', 'mexican', 'indian', 'trinidadian'
+            ],
+            'mexican': [
+                'asian', 'chinese', 'italian', 'jamaican', 'indian', 'thai',
+                'japanese', 'korean', 'vietnamese', 'mediterranean'
+            ]
+        }
+        
+        # Get exclusion patterns for requested cuisine
+        exclusions = cuisine_exclusions.get(requested_cuisine, [])
+        
+        # Check if title contains any excluded cuisine indicators
+        for exclusion in exclusions:
+            if exclusion in title:
+                return False
+        
+        # Additional specific checks for Asian cuisine
+        if requested_cuisine == 'asian':
+            # Allow explicitly Asian recipes
+            asian_indicators = ['asian', 'chinese', 'japanese', 'korean', 'thai', 'vietnamese', 
+                              'teriyaki', 'stir fry', 'stir-fry', 'sesame', 'ginger', 'soy sauce']
+            if any(indicator in title for indicator in asian_indicators):
+                return True
+            
+            # Allow Indian/curry recipes only if they don't contain Caribbean/Jamaican indicators
+            indian_indicators = ['curry', 'korma', 'tikka', 'masala', 'tandoori']
+            if any(indicator in title for indicator in indian_indicators):
+                # But exclude if it's clearly Caribbean/Jamaican
+                caribbean_indicators = ['jamaican', 'caribbean', 'trinidadian', 'jerk']
+                if any(indicator in title for indicator in caribbean_indicators):
+                    return False
+                return True
+        
+        # If no specific exclusions found, allow the recipe
+        return True
     
     def _process_recipe_data(self, recipe_data: Dict) -> Dict[str, Any]:
         """

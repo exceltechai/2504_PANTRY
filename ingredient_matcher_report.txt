@@ -1,0 +1,52 @@
+INGREDIENT MATCHER ACCURACY REPORT
+==================================================
+Current threshold: 90%
+
+
+ACCURACY METRICS (Threshold: 90%)
+------------------------------
+Total test cases: 21
+Accuracy: 90.5%
+Precision: 0.905
+Recall: 1.000
+F1 Score: 0.950
+Correct matches: 19
+False positives: 2
+False negatives: 0
+
+DETAILED RESULTS
+------------------------------
+✓ chicken breast -> Chicken Breast (score: 100.0, expected: Chicken Breast)
+✓ olive oil -> Olive Oil (score: 100.0, expected: Olive Oil)
+✓ scallions -> Green Onions (score: 100.0, expected: Green Onions)
+✓ spring onions -> Green Onions (score: 100.0, expected: Green Onions)
+✓ sweet pepper -> Bell Peppers (score: 100.0, expected: Bell Peppers)
+✓ courgette -> Zucchini (score: 100.0, expected: Zucchini)
+✓ bell pepper -> Bell Peppers (score: 100.0, expected: Bell Peppers)
+✓ sweet potato -> Sweet Potatoes (score: 96.0, expected: Sweet Potatoes)
+✓ avocado -> Avocados (score: 100.0, expected: Avocados)
+✓ carrot -> Carrots (score: 100.0, expected: Carrots)
+✓ 2 lbs ground beef -> Ground Beef (score: 100.0, expected: Ground Beef)
+✓ 1 cup diced tomatoes -> Tomatoes (score: 100.0, expected: Tomatoes)
+✓ 3 cloves fresh garlic -> Garlic (score: 100.0, expected: Garlic)
+✓ 2 tbsp extra virgin olive oil -> Olive Oil (score: 100.0, expected: Olive Oil)
+✓ 1 tsp kosher salt -> Sea Salt (score: 100.0, expected: Sea Salt)
+✓ 1/2 tsp ground black pepper -> Black Pepper (score: 96.3, expected: Black Pepper)
+✗ chicken thighs -> Chicken Breast (score: 93.3, expected: NO_MATCH)
+✓ ground turkey -> Turkey Mince (score: 100.0, expected: Turkey Mince)
+✓ quinoa -> NO_MATCH (score: 0.0, expected: NO_MATCH)
+✓ almond flour -> NO_MATCH (score: 0.0, expected: NO_MATCH)
+✗ coconut milk -> Coconut Oil (score: 93.3, expected: NO_MATCH)
+
+OPTIMAL THRESHOLD RECOMMENDATION
+------------------------------
+Recommended threshold: 95%
+Expected F1 score: 1.000
+
+ALGORITHM COMPARISON
+------------------------------
+ratio           F1: 1.000 Accuracy: 100.0%
+partial_ratio   F1: 0.923 Accuracy: 85.7%
+token_sort_ratio F1: 1.000 Accuracy: 100.0%
+token_set_ratio F1: 0.950 Accuracy: 90.5%
+WRatio          F1: 0.950 Accuracy: 90.5%

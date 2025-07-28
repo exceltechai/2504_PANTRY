@@ -11,22 +11,21 @@
     <div class="container">
         <header>
             <h1><i class="fas fa-utensils"></i> Pantry & Commissary Recipe System</h1>
-            <p>Find Whole30-compliant recipes using your available ingredients</p>
         </header>
 
         <main>
             <section class="sample-data-section">
-                <h2><i class="fas fa-list"></i> Current Inventory</h2>
+                <h2><i class="fas fa-list"></i> Ingredient Availability</h2>
                 <div id="inventory-summary" class="inventory-summary">
                     <div class="loading-inventory">
-                        <i class="fas fa-spinner fa-spin"></i> Loading sample inventory...
+                        <i class="fas fa-spinner fa-spin"></i> Loading sample ingredient availability...
                     </div>
                 </div>
                 
-                <details class="upload-toggle">
-                    <summary><i class="fas fa-upload"></i> Upload Custom Inventory Files (Optional)</summary>
+                <details class="upload-toggle" style="display: none;">
+                    <summary><i class="fas fa-upload"></i> Upload Custom Availability Lists (Optional)</summary>
                     <div class="upload-content">
-                        <p class="upload-disclaimer">The system is pre-loaded with sample pantry and commissary data. Only upload files if you want to use your own inventory.</p>
+                        <p class="upload-disclaimer">The system is pre-loaded with sample pantry and commissary availability. Only upload files if you want to use your own availability data.</p>
                         <div class="upload-grid">
                             <div class="upload-box">
                                 <h3><i class="fas fa-home"></i> Pantry (Free)</h3>
@@ -35,7 +34,7 @@
                                     <i class="fas fa-cloud-upload-alt"></i>
                                     <span>Choose Pantry File</span>
                                 </label>
-                                <p class="file-info">Upload your pantry inventory (CSV or Excel)</p>
+                                <p class="file-info">Upload pantry availability list (CSV or Excel)</p>
                             </div>
                             
                             <div class="upload-box">
@@ -45,7 +44,7 @@
                                     <i class="fas fa-cloud-upload-alt"></i>
                                     <span>Choose Commissary File</span>
                                 </label>
-                                <p class="file-info">Upload your commissary inventory (CSV or Excel)</p>
+                                <p class="file-info">Upload commissary availability list (CSV or Excel)</p>
                             </div>
                         </div>
                         
@@ -72,8 +71,8 @@
                     </div>
                     
                     <div class="form-group">
-                        <label for="cuisine">Cuisine (Optional):</label>
-                        <input type="text" id="cuisine" placeholder="e.g., Mediterranean, Asian">
+                        <label for="cuisine">Cuisine/Flavor (Optional):</label>
+                        <input type="text" id="cuisine" placeholder="e.g., Mediterranean, Asian, spicy, mild">
                     </div>
                     
                     <button id="search-btn" class="btn-primary">

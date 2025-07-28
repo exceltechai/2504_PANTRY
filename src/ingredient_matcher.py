@@ -26,7 +26,7 @@ class IngredientMatcher:
     """
     
     def __init__(self, fuzzy_threshold: int = None):
-        self.fuzzy_threshold = fuzzy_threshold or int(os.getenv('FUZZY_MATCH_THRESHOLD', 80))
+        self.fuzzy_threshold = fuzzy_threshold or int(os.getenv('FUZZY_MATCH_THRESHOLD', 90))
         
         # Common ingredient synonyms and variations
         self.synonyms = {
@@ -47,6 +47,7 @@ class IngredientMatcher:
             'beef mince': ['ground beef', 'minced beef'],
             'ground turkey': ['turkey mince', 'minced turkey'],
             'turkey mince': ['ground turkey', 'minced turkey'],
+            'turkey': ['turkey mince', 'ground turkey'],
             'chicken breast': ['chicken breasts', 'chicken breast meat'],
             'olive oil': ['extra virgin olive oil', 'evoo'],
             'coconut oil': ['virgin coconut oil', 'unrefined coconut oil'],
@@ -76,7 +77,7 @@ class IngredientMatcher:
             r'\b\d+\.?\d*\s*(inch|inches|in)\b',
             r'\b\d+\.?\d*\s*(piece|pieces|pcs|slice|slices|clove|cloves)\b',
             r'\b\d+\.?\d*\s*(can|cans|jar|jars|bottle|bottles|package|packages|pkg)\b',
-            r'\(\d+\.?\d*\s*[^)]*\)',  # Remove parenthetical quantities
+            r'\([^)]*\)',  # Remove all parenthetical content
             r'\b\d+\.?\d*\s*-\s*\d+\.?\d*\b',  # Remove ranges like "2-3"
             r'\b\d+/\d+\b',  # Remove fractions like "1/2"
             r'\b\d+\.?\d*\b',  # Remove standalone numbers
@@ -94,18 +95,18 @@ class IngredientMatcher:
         # Convert to lowercase and strip
         normalized = ingredient.lower().strip()
         
-        # Remove unit patterns and quantities
+        # Remove unit patterns and quantities first
         for pattern in self.unit_patterns:
-            normalized = re.sub(pattern, '', normalized, flags=re.IGNORECASE)
+            normalized = re.sub(pattern, ' ', normalized, flags=re.IGNORECASE)
         
-        # Remove stop words
-        words = normalized.split()
-        filtered_words = [word for word in words if word not in self.stop_words]
-        normalized = ' '.join(filtered_words)
-        
-        # Remove extra whitespace and punctuation
-        normalized = re.sub(r'[,\(\)\[\]\.]+', '', normalized)
+        # Remove extra punctuation and clean up
+        normalized = re.sub(r'[,\(\)\[\]\.;:]+', ' ', normalized)
         normalized = re.sub(r'\s+', ' ', normalized).strip()
+        
+        # Remove stop words after initial cleanup
+        words = normalized.split()
+        filtered_words = [word for word in words if word and word not in self.stop_words]
+        normalized = ' '.join(filtered_words)
         
         # Handle common plural forms
         if normalized.endswith('ies'):
@@ -115,7 +116,7 @@ class IngredientMatcher:
         elif normalized.endswith('s') and len(normalized) > 3:
             normalized = normalized[:-1]
         
-        return normalized
+        return normalized.strip()
     
     def get_ingredient_variations(self, ingredient: str) -> List[str]:
         """
@@ -181,25 +182,26 @@ class IngredientMatcher:
             if not recipe_var:
                 continue
                 
-            # Use rapidfuzz for efficient batch matching
+            # Use rapidfuzz for efficient batch matching with token_set_ratio for better partial matching
             matches = process.extract(
                 recipe_var, 
                 [name for name, _ in available_names],
-                scorer=fuzz.ratio,
+                scorer=fuzz.token_set_ratio,
                 limit=5
             )
             
             for match_result in matches:
-                if len(match_result) != 2:
+                if len(match_result) == 3:
+                    match_name, score, _ = match_result
+                elif len(match_result) == 2:
+                    match_name, score = match_result
+                else:
                     logger.warning(f"Unexpected match result format: {match_result}")
                     continue
-                    
-                match_name, score = match_result
                 if score > best_score and score >= self.fuzzy_threshold:
                     # Find the original item for this match
                     for name_item_tuple in available_names:
                         if len(name_item_tuple) != 2:
-                            logger.warning(f"Unexpected available_names format: {name_item_tuple}")
                             continue
                             
                         name, item = name_item_tuple

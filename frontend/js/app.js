@@ -4,7 +4,7 @@
  */
 
 // Configuration
-const API_BASE_URL = 'http://localhost:5001';
+const API_BASE_URL = window.location.hostname === 'localhost' ? 'http://localhost:5001' : '';
 
 // DOM Elements
 const pantryUpload = document.getElementById('pantry-upload');
@@ -77,7 +77,7 @@ async function loadSampleData() {
             // Update UI to show loaded inventory
             displayInventorySummary(data);
             
-            console.log(`Loaded ${data.summary.total_items} sample inventory items`);
+            console.log(`Loaded ${data.summary.total_items} total ingredient availability items`);
         } else {
             throw new Error(data.message || 'Failed to load sample data');
         }
@@ -86,7 +86,7 @@ async function loadSampleData() {
         inventorySummary.innerHTML = `
             <div class="error-message">
                 <i class="fas fa-exclamation-triangle"></i>
-                <p>Unable to load sample inventory. Please try uploading your own files.</p>
+                <p>Unable to load sample availability data. Please try uploading your own files.</p>
             </div>
         `;
     }
@@ -107,7 +107,7 @@ function displayInventorySummary(data) {
                     <h3>Pantry</h3>
                     <span class="badge">${summary.pantry_count} items</span>
                 </div>
-                <p>Free ingredients from your pantry</p>
+                <p>Free ingredients available at pantry</p>
             </div>
             
             <div class="inventory-card commissary-card">
@@ -116,7 +116,7 @@ function displayInventorySummary(data) {
                     <h3>Commissary</h3>
                     <span class="badge">${summary.commissary_count} items</span>
                 </div>
-                <p>Reduced-cost ingredients from commissary</p>
+                <p>Reduced-cost ingredients available at commissary</p>
             </div>
             
             <div class="inventory-card total-card">
@@ -125,7 +125,7 @@ function displayInventorySummary(data) {
                     <h3>Total</h3>
                     <span class="badge">${summary.total_items} items</span>
                 </div>
-                <p>Using ${dataSource} inventory data</p>
+                <p>Using ${dataSource === 'sample' ? 'default' : dataSource} availability data</p>
             </div>
         </div>
         
@@ -220,13 +220,13 @@ async function handleUpload() {
                             <h3>Custom Files</h3>
                             <span class="badge">Uploaded</span>
                         </div>
-                        <p>Using your uploaded inventory files</p>
+                        <p>Using your uploaded availability lists</p>
                     </div>
                 </div>
                 
                 <div class="ready-message">
                     <i class="fas fa-check-circle"></i>
-                    <span>Ready to search for recipes with your custom inventory!</span>
+                    <span>Ready to search for recipes with your custom availability data!</span>
                 </div>
             `;
             
@@ -299,42 +299,121 @@ function displayResults(recipes) {
         return;
     }
     
-    resultsContainer.innerHTML = recipes.map(recipe => `
+    resultsContainer.innerHTML = recipes.map(recipe => {
+        const analysis = recipe.ingredient_analysis || {};
+        return `
         <div class="recipe-card">
             <h3><i class="fas fa-utensils"></i> ${recipe.title}</h3>
-            <p>${recipe.description || 'A delicious Whole30-compliant recipe'}</p>
+            <p>${recipe.summary ? recipe.summary.substring(0, 150) + '...' : 'A delicious Whole30-compliant recipe'}</p>
             
             <div class="match-percentage">
-                <i class="fas fa-percentage"></i> ${recipe.match_percentage}% ingredients available
+                <i class="fas fa-percentage"></i> ${analysis.match_percentage || 0}% ingredients available
             </div>
             
             <div class="ingredient-sources">
                 <span class="source-tag source-pantry">
-                    <i class="fas fa-home"></i> Pantry: ${recipe.sources.pantry}
+                    <i class="fas fa-home"></i> Pantry: ${analysis.pantry_count || 0}
                 </span>
                 <span class="source-tag source-commissary">
-                    <i class="fas fa-store"></i> Commissary: ${recipe.sources.commissary}
+                    <i class="fas fa-store"></i> Commissary: ${analysis.commissary_count || 0}
                 </span>
                 <span class="source-tag source-store">
-                    <i class="fas fa-shopping-cart"></i> Store: ${recipe.sources.store}
+                    <i class="fas fa-shopping-cart"></i> Store: ${analysis.store_count || 0}
                 </span>
+            </div>
+            
+            <div class="grocery-lists" style="margin-top: 15px;">
+                <details class="grocery-details">
+                    <summary style="cursor: pointer; color: #666; font-size: 0.9rem;">
+                        <i class="fas fa-shopping-list"></i> View Shopping Lists
+                    </summary>
+                    <div class="grocery-breakdown" style="margin-top: 10px; padding: 10px; background: #f8f9fa; border-radius: 5px;">
+                        ${generateGroceryList(analysis)}
+                    </div>
+                </details>
+            </div>
+            
+            <div class="priority-score" style="margin-top: 10px;">
+                <i class="fas fa-star"></i> Priority Score: ${analysis.priority_score ? (analysis.priority_score * 100).toFixed(1) : 0}%
             </div>
             
             <div style="margin-top: 15px;">
                 <span style="color: #666;">
-                    <i class="fas fa-list"></i> ${recipe.ingredients_available}/${recipe.ingredients_total} ingredients available
+                    <i class="fas fa-list"></i> ${analysis.total_ingredients || 0} total ingredients
                 </span>
             </div>
             
-            ${recipe.url ? `
+            ${recipe.spoonacular_url ? `
                 <div style="margin-top: 15px;">
-                    <a href="${recipe.url}" target="_blank" class="btn-primary" style="display: inline-block; text-decoration: none;">
+                    <a href="${recipe.spoonacular_url}" target="_blank" class="btn-primary" style="display: inline-block; text-decoration: none;">
                         <i class="fas fa-external-link-alt"></i> View Recipe
                     </a>
                 </div>
             ` : ''}
         </div>
-    `).join('');
+        `
+    }).join('');
+}
+
+/**
+ * Generate detailed grocery list breakdown by source
+ */
+function generateGroceryList(analysis) {
+    let html = '';
+    
+    // Pantry items (free)
+    if (analysis.pantry_ingredients && analysis.pantry_ingredients.length > 0) {
+        html += `
+            <div class="grocery-section" style="margin-bottom: 15px;">
+                <h4 style="color: #28a745; margin-bottom: 8px; font-size: 0.9rem;">
+                    <i class="fas fa-home"></i> Pantry (Free)
+                </h4>
+                <ul style="margin: 0; padding-left: 20px; color: #666;">
+                    ${analysis.pantry_ingredients.map(ingredient => 
+                        `<li style="margin-bottom: 3px;">${ingredient}</li>`
+                    ).join('')}
+                </ul>
+            </div>
+        `;
+    }
+    
+    // Commissary items (reduced cost)
+    if (analysis.commissary_ingredients && analysis.commissary_ingredients.length > 0) {
+        html += `
+            <div class="grocery-section" style="margin-bottom: 15px;">
+                <h4 style="color: #007bff; margin-bottom: 8px; font-size: 0.9rem;">
+                    <i class="fas fa-store"></i> Commissary (Reduced Cost)
+                </h4>
+                <ul style="margin: 0; padding-left: 20px; color: #666;">
+                    ${analysis.commissary_ingredients.map(ingredient => 
+                        `<li style="margin-bottom: 3px;">${ingredient}</li>`
+                    ).join('')}
+                </ul>
+            </div>
+        `;
+    }
+    
+    // Store items (full price)
+    if (analysis.store_ingredients && analysis.store_ingredients.length > 0) {
+        html += `
+            <div class="grocery-section">
+                <h4 style="color: #dc3545; margin-bottom: 8px; font-size: 0.9rem;">
+                    <i class="fas fa-shopping-cart"></i> Supermarket (Full Price)
+                </h4>
+                <ul style="margin: 0; padding-left: 20px; color: #666;">
+                    ${analysis.store_ingredients.map(ingredient => 
+                        `<li style="margin-bottom: 3px;">${ingredient}</li>`
+                    ).join('')}
+                </ul>
+            </div>
+        `;
+    }
+    
+    if (!html) {
+        html = '<p style="color: #999; font-style: italic;">No ingredient breakdown available</p>';
+    }
+    
+    return html;
 }
 
 /**

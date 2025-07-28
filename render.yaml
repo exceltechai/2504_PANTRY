@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: pantry-commissary-system
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python src/app.py
+    envVars:
+      - key: FLASK_DEBUG
+        value: false
+      - key: SPOONACULAR_API_KEY
+        sync: false  # This will need to be set manually in Render dashboard
+    healthCheckPath: /health
+    autoDeploy: false  # Set to true if you want automatic deploys on git push

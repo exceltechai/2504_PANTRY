@@ -53,69 +53,101 @@ except Exception as e:
 
 # Sample data functions
 def load_sample_data():
-    """Load sample pantry and commissary data from CSV files"""
+    """Load actual pantry and commissary data from CSV files"""
     try:
-        # Get the project root directory (parent of src)
-        project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        pantry_path = os.path.join(project_root, 'specs', 'Pantry.csv')
-        commissary_path = os.path.join(project_root, 'specs', 'Commissary.csv')
+        import pandas as pd
         
-        pantry_data = []
-        commissary_data = []
+        # Load actual pantry data
+        pantry_file = os.path.join(os.path.dirname(__file__), '..', 'specs', 'Pantry.csv')
+        pantry_df = pd.read_csv(pantry_file, encoding='utf-8-sig')  # Handle BOM
+        pantry_data = pantry_df.to_dict('records')
         
-        # Load pantry data
-        if os.path.exists(pantry_path):
-            df_pantry = pd.read_csv(pantry_path)
-            # Clean the data - remove empty rows and filter valid items
-            df_pantry = df_pantry.dropna(subset=['Item'])
-            df_pantry = df_pantry[df_pantry['Item'].str.strip() != '']
-            pantry_data = df_pantry.to_dict('records')
-            logger.info(f"Loaded {len(pantry_data)} pantry items")
+        # Load actual commissary data  
+        commissary_file = os.path.join(os.path.dirname(__file__), '..', 'specs', 'Commissary.csv')
+        commissary_df = pd.read_csv(commissary_file, encoding='utf-8-sig')  # Handle BOM
+        commissary_data = commissary_df.to_dict('records')
         
-        # Load commissary data  
-        if os.path.exists(commissary_path):
-            df_commissary = pd.read_csv(commissary_path)
-            # Clean the data - remove empty rows and filter valid items
-            df_commissary = df_commissary.dropna(subset=['Item'])
-            df_commissary = df_commissary[df_commissary['Item'].str.strip() != '']
-            commissary_data = df_commissary.to_dict('records')
-            logger.info(f"Loaded {len(commissary_data)} commissary items")
+        # Clean up any empty columns that might have been added by pandas
+        pantry_data = [{k: v for k, v in item.items() if pd.notna(v) and k.strip()} for item in pantry_data]
+        commissary_data = [{k: v for k, v in item.items() if pd.notna(v) and k.strip()} for item in commissary_data]
+        
+        logger.info(f"Loaded {len(pantry_data)} pantry items and {len(commissary_data)} commissary items from CSV files")
             
         return {
             'pantry': pantry_data,
             'commissary': commissary_data,
             'status': 'success',
+            'summary': {
+                'pantry_count': len(pantry_data),
+                'commissary_count': len(commissary_data),
+                'total_items': len(pantry_data) + len(commissary_data)
+            },
             'timestamp': datetime.now().isoformat()
         }
         
     except Exception as e:
-        logger.error(f"Error loading sample data: {str(e)}")
+        logger.error(f"Error loading CSV data: {str(e)}")
         return {
             'pantry': [],
             'commissary': [],
             'status': 'error',
             'error': str(e),
+            'summary': {
+                'pantry_count': 0,
+                'commissary_count': 0,
+                'total_items': 0
+            },
             'timestamp': datetime.now().isoformat()
         }
 
 @app.route('/')
 def home():
-    """Root endpoint with basic project information"""
-    return jsonify({
-        'project': 'Pantry & Commissary Recipe Recommendation System',
-        'version': '1.0.0',
-        'status': 'running',
-        'timestamp': datetime.now().isoformat(),
-        'endpoints': {
-            'health': '/health',
-            'api_info': '/api/info',
-            'sample_data': '/api/sample-data',
-            'upload': '/api/upload',
-            'recipes': '/api/recipes',
-            'recipe_details': '/api/recipes/{id}',
-            'test_api': '/api/test-connection'
-        }
-    })
+    """Serve the frontend application"""
+    try:
+        frontend_path = os.path.join(os.path.dirname(__file__), '..', 'frontend', 'index.html')
+        with open(frontend_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+        return content, 200, {'Content-Type': 'text/html'}
+    except FileNotFoundError:
+        # Fallback to API info if frontend not found
+        return jsonify({
+            'project': 'Pantry & Commissary Recipe Recommendation System',
+            'version': '1.0.0',
+            'status': 'running',
+            'timestamp': datetime.now().isoformat(),
+            'endpoints': {
+                'health': '/health',
+                'api_info': '/api/info',
+                'sample_data': '/api/sample-data',
+                'upload': '/api/upload',
+                'recipes': '/api/recipes',
+                'recipe_details': '/api/recipes/{id}',
+                'test_api': '/api/test-connection'
+            }
+        })
+
+# Serve static files
+@app.route('/js/<path:filename>')
+def serve_js(filename):
+    """Serve JavaScript files"""
+    try:
+        js_path = os.path.join(os.path.dirname(__file__), '..', 'frontend', 'js', filename)
+        with open(js_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+        return content, 200, {'Content-Type': 'application/javascript'}
+    except FileNotFoundError:
+        return "File not found", 404
+
+@app.route('/css/<path:filename>')
+def serve_css(filename):
+    """Serve CSS files"""
+    try:
+        css_path = os.path.join(os.path.dirname(__file__), '..', 'frontend', 'css', filename)
+        with open(css_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+        return content, 200, {'Content-Type': 'text/css'}
+    except FileNotFoundError:
+        return "File not found", 404
 
 @app.route('/health')
 def health_check():
@@ -140,7 +172,7 @@ def api_info():
             'Smart ingredient prioritization'
         ],
         'endpoints': {
-            'GET /api/sample-data': 'Get sample pantry and commissary data',
+            'GET /api/sample-data': 'Get actual pantry and commissary availability data',
             'POST /api/upload': 'Upload pantry and commissary files',
             'GET /api/recipes': 'Search for Whole30 recipes',
             'GET /api/recipes/{id}': 'Get detailed recipe information',
@@ -150,7 +182,7 @@ def api_info():
 
 @app.route('/api/sample-data')
 def get_sample_data():
-    """Get sample pantry and commissary data from CSV files"""
+    """Get actual pantry and commissary data from CSV files"""
     try:
         sample_data = load_sample_data()
         
@@ -231,15 +263,35 @@ def search_recipes():
         # Get query parameters
         query = request.args.get('query', '')
         dish_type = request.args.get('type', 'main course')
-        cuisine = request.args.get('cuisine', '')
+        cuisine_input = request.args.get('cuisine', '')
         max_results = int(request.args.get('limit', 10))
         offset = int(request.args.get('offset', 0))
         
-        logger.info(f"Searching recipes: type={dish_type}, cuisine={cuisine}, limit={max_results}")
+        # Smart handling of cuisine input - detect if it's a cuisine or flavor profile
+        known_cuisines = ['mediterranean', 'asian', 'mexican', 'italian', 'indian', 'thai', 'chinese', 'japanese', 'french', 'greek']
+        flavor_profiles = ['spicy', 'mild', 'sweet', 'savory', 'hot', 'tangy', 'smoky', 'herbal']
+        
+        cuisine = ''
+        search_query = query
+        
+        if cuisine_input:
+            cuisine_lower = cuisine_input.lower()
+            if any(known_cuisine in cuisine_lower for known_cuisine in known_cuisines):
+                # It's a cuisine
+                cuisine = cuisine_input
+            elif any(flavor in cuisine_lower for flavor in flavor_profiles):
+                # It's a flavor profile - use as query instead
+                search_query = cuisine_input if not query else f"{query} {cuisine_input}"
+            else:
+                # Unknown - try both
+                cuisine = cuisine_input
+                search_query = cuisine_input if not query else f"{query} {cuisine_input}"
+        
+        logger.info(f"Searching recipes: type={dish_type}, cuisine={cuisine}, query={search_query}, limit={max_results}")
         
         # Search recipes using Spoonacular API with Whole30 filter
         search_result = spoonacular_client.search_recipes(
-            query=query,
+            query=search_query,
             dish_type=dish_type,
             cuisine=cuisine,
             diet='whole30',  # Force Whole30 compliance
@@ -376,7 +428,8 @@ def internal_error(error):
     }), 500
 
 if __name__ == '__main__':
-    port = int(os.getenv('FLASK_PORT', 5000))
+    # Use PORT environment variable for deployment platforms like Render
+    port = int(os.getenv('PORT', os.getenv('FLASK_PORT', 5000)))
     debug = os.getenv('FLASK_DEBUG', 'False').lower() == 'true'
     
     logger.info(f"Starting Pantry & Commissary Recipe System on port {port}")
