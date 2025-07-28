@@ -39,6 +39,28 @@ header p {
     opacity: 0.9;
 }
 
+/* Personal message styles */
+.personal-message-section {
+    background: linear-gradient(135deg, #ff7b7b 0%, #ff9999 100%);
+    border-radius: 10px;
+    padding: 0;
+    margin-bottom: 30px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+.personal-message {
+    padding: 25px 30px;
+    color: white;
+    text-align: center;
+}
+
+.personal-message p {
+    font-size: 1.1rem;
+    line-height: 1.6;
+    font-weight: 500;
+    margin: 0;
+}
+
 /* Main content styles */
 main {
     display: flex;
